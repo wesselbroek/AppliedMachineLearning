@@ -205,3 +205,11 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Data files - Machine Learning project specific
+test_images/
+train_images/
+attributes.npy
+attributes.txt
+class_names.npy
+*.csv
