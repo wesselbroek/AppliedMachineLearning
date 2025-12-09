@@ -209,6 +209,7 @@ __marimo__/
 # Data files - Machine Learning project specific
 test_images/
 train_images/
+processed_train/
 attributes.npy
 attributes.txt
 class_names.npy
