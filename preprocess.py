@@ -7,14 +7,22 @@ import torch
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from collections import Counter
+import numpy as np
 
 #dataset class
-
 class BirdDataset(Dataset):
-    def __init__(self, csv_path, root_dir, transform=None):
+    def __init__(self, csv_path, root_dir, attributes_path=None, transform=None):
         self.df = pd.read_csv(csv_path)
         self.root_dir = root_dir
         self.transform = transform
+
+        # load attributes if provided
+        if attributes_path is not None:
+            self.attributes = np.load(attributes_path)  # shape: [num_classes, num_attributes]
+            self.attributes = torch.tensor(self.attributes, dtype=torch.float32)
+            print(f"Loaded attributes: {self.attributes.shape}")
+        else:
+            self.attributes = None
 
     def __len__(self):
         return len(self.df)
@@ -29,11 +37,15 @@ class BirdDataset(Dataset):
         if self.transform:
             img = self.transform(img)
 
-        return img, label, img_path
+        # get attribute vector for this class
+        if self.attributes is not None:
+            attr_vector = self.attributes[label]
+        else:
+            attr_vector = torch.tensor([])
 
+        return img, label, attr_vector, img_path
 
 #normalization and augmentation of images
-
 augmentation_transforms = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.RandomResizedCrop(224),
@@ -53,9 +65,7 @@ basic_transforms = transforms.Compose([
                          [0.229, 0.224, 0.225])
 ])
 
-
 # saving the preprocessed images
-
 def save_tensor_as_image(tensor, output_path):
     # Denormalize and save tensor as image file.
     denorm = transforms.Normalize(
@@ -66,7 +76,6 @@ def save_tensor_as_image(tensor, output_path):
     img = transforms.ToPILImage()(img)
     img.save(output_path)
 
-
 def preprocess_and_save(dataset, output_dir, sampler=None):
     loader = DataLoader(dataset, batch_size=1, sampler=sampler, shuffle=False)
 
@@ -76,7 +85,7 @@ def preprocess_and_save(dataset, output_dir, sampler=None):
 
     print(f"\nSaving preprocessed data to: {output_dir}")
 
-    for i, (img_tensor, label, img_path) in enumerate(tqdm(loader)):
+    for i, (img_tensor, label, attr_vector, img_path) in enumerate(tqdm(loader)):
         class_dir = os.path.join(output_dir, f"class_{label.item()+1}")
         os.makedirs(class_dir, exist_ok=True)
 
@@ -85,9 +94,12 @@ def preprocess_and_save(dataset, output_dir, sampler=None):
 
         save_tensor_as_image(img_tensor.squeeze(0), output_path)
 
+        # save attributes as .pt file
+        if attr_vector.numel() > 0:
+            attr_output_path = os.path.join(class_dir, filename.replace(".jpg", "_attr.pt"))
+            torch.save(attr_vector.squeeze(0), attr_output_path)
 
 #checks and handles weighted samples
-
 def create_weighted_sampler(dataset):
     labels = [dataset[i][1] for i in range(len(dataset))]
     class_counts = Counter(labels)
@@ -105,19 +117,22 @@ def create_weighted_sampler(dataset):
 def main():
     csv_path = "train_images.csv"
     root_dir = "."
+    attributes_path = "attributes.npy"
 
-    dataset = BirdDataset(csv_path, root_dir, transform=augmentation_transforms)
+    dataset = BirdDataset(
+        csv_path=csv_path,
+        root_dir=root_dir,
+        attributes_path=attributes_path,
+        transform=augmentation_transforms
+    )
 
     USE_WEIGHTED_SAMPLING = True
-
     sampler = create_weighted_sampler(dataset) if USE_WEIGHTED_SAMPLING else None
 
     output_dir = "processed_train"
-
     preprocess_and_save(dataset, output_dir, sampler=sampler)
 
     print("Preprocessing completed")
-
 
 if __name__ == "__main__":
     main()
