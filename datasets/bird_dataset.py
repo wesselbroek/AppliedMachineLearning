@@ -40,7 +40,7 @@ class BirdDataset(Dataset):
         else:
             attr_vector = torch.tensor([])
 
-        return img, label, attr_vector, img_path
+        return img, label, attr_vector
 
 
 class TestBirdDataset(Dataset):
@@ -60,10 +60,14 @@ class TestBirdDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        img_path = os.path.join(self.root_dir, row["image_path"])
+
+        rel_path = row["image_path"].lstrip("/")
+        img_path = os.path.join(self.root_dir, rel_path)
+
         img = Image.open(img_path).convert("RGB")
+
         if self.transform:
             img = self.transform(img)
 
-        return img, row["image_path"]
+        return img, img_path
 

@@ -29,27 +29,25 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=32, sampler=train_sampler)
     val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 
-    # 3. Model
+    # Model
     model = BirdClassifier(num_classes=200, attr_dim=attr_dim).to(device)
 
-    # 4. Optimizer & Loss
+    # Optimizer & Loss
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     criterion = nn.CrossEntropyLoss()
 
-    # 5. Trainer
+    # Trainer
     trainer = Trainer(model, device, train_loader, val_loader, optimizer, criterion)
     trainer.train(epochs=20)
 
-    # 6. Prediction
+    # Prediction
     predictor = Predictor(model, device, get_val_transforms(), attr_dim=attr_dim, attributes=attr_array)
-    predictions = predictor.predict("data/test_images_samples.csv", "data/")
+    predictions = predictor.predict("data/test_images_sample.csv", "data/")
 
-    # 7. Save submission
-    df = pd.read_csv("data/test_images_samples.csv")
-    pred_dict = {path: label for path, label in predictions}
-    df["label"] = df["image_path"].map(pred_dict)
-    df.to_csv("submission.csv", index=False)
-    print("Saved submission.csv")
+    # Save submission
+    pred_df = pd.DataFrame(predictions, columns=["pred_path", "pred_label"])
+    pred_df.to_csv("prediction.csv", index=False)
+    print("Saved prediction.csv")
 
 
 if __name__ == "__main__":
