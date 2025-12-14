@@ -80,27 +80,30 @@ def save_tensor_as_image(tensor, output_path):
     img.save(output_path)
 
 
-def preprocess_and_save(dataset, output_dir, sampler=None):
+def preprocess_and_save(dataset, output_dir, sampler=None, num_augmentations=1):
     loader = DataLoader(dataset, batch_size=1, sampler=sampler, shuffle=False)
 
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    os.makedirs(output_dir)
+    # Don't remove output_dir here since it contains original images
+    os.makedirs(output_dir, exist_ok=True)
 
-    print(f"\nSaving preprocessed data to: {output_dir}")
+    print(f"\nSaving augmented images to: {output_dir}")
 
     for i, (img_tensor, label, attr_vector, img_path) in enumerate(tqdm(loader)):
         class_dir = os.path.join(output_dir, f"class_{label.item()+1}")
         os.makedirs(class_dir, exist_ok=True)
 
         filename = os.path.basename(img_path[0])
-        output_path = os.path.join(class_dir, filename)
-
+        
+        # Save the current image (augmented version)
+        base_name = os.path.splitext(filename)[0]
+        ext = os.path.splitext(filename)[1]
+        output_path = os.path.join(class_dir, f"{base_name}_aug{i % num_augmentations}{ext}")
+        
         save_tensor_as_image(img_tensor.squeeze(0), output_path)
 
         # save attributes as .pt file
         if attr_vector.numel() > 0:
-            attr_output_path = os.path.join(class_dir, filename.replace(".jpg", "_attr.pt"))
+            attr_output_path = os.path.join(class_dir, f"{base_name}_aug{i % num_augmentations}_attr.pt")
             torch.save(attr_vector.squeeze(0), attr_output_path)
 
 
@@ -125,7 +128,34 @@ def main():
     root_dir = "."
     attributes_path = "data/attributes.npy"
 
-    dataset = BirdDataset(
+    output_dir = "processed_train"
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)
+    os.makedirs(output_dir)
+
+    # First, save original images with basic transforms
+    original_dataset = BirdDataset(
+        csv_path=csv_path,
+        root_dir=root_dir,
+        attributes_path=attributes_path,
+        transform=basic_transforms
+    )
+    
+    loader = DataLoader(original_dataset, batch_size=1, shuffle=False)
+    for img_tensor, label, attr_vector, img_path in tqdm(loader):
+        class_dir = os.path.join(output_dir, f"class_{label.item()+1}")
+        os.makedirs(class_dir, exist_ok=True)
+        
+        filename = os.path.basename(img_path[0])
+        output_path = os.path.join(class_dir, filename)
+        save_tensor_as_image(img_tensor.squeeze(0), output_path)
+        
+        if attr_vector.numel() > 0:
+            attr_output_path = os.path.join(class_dir, filename.replace(".jpg", "_attr.pt"))
+            torch.save(attr_vector.squeeze(0), attr_output_path)
+
+    # Then, save augmented images with augmentation transforms
+    augmented_dataset = BirdDataset(
         csv_path=csv_path,
         root_dir=root_dir,
         attributes_path=attributes_path,
@@ -133,12 +163,12 @@ def main():
     )
 
     USE_WEIGHTED_SAMPLING = True
-    sampler = create_weighted_sampler(dataset) if USE_WEIGHTED_SAMPLING else None
+    sampler = create_weighted_sampler(augmented_dataset) if USE_WEIGHTED_SAMPLING else None
+    
+    # Don't remove output_dir since we already have originals
+    preprocess_and_save(augmented_dataset, output_dir, sampler=sampler, num_augmentations=1)
 
-    output_dir = "processed_train"
-    preprocess_and_save(dataset, output_dir, sampler=sampler)
-
-    print("Preprocessing completed")
+    print("\nPreprocessing completed - saved both original and augmented images")
 
 
 if __name__ == "__main__":

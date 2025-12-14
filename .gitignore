@@ -213,4 +213,7 @@ processed_train/
 data/attributes.npy
 attributes.txt
 class_names.npy
+test_images/
+train_images/
+data/attributes.npy
 *.csv
