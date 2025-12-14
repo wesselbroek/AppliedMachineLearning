@@ -69,5 +69,5 @@ class Trainer:
             print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Acc={train_acc:.4f} | Val Loss={val_loss:.4f}, Acc={val_acc:.4f}")
             if val_acc > best_acc:
                 best_acc = val_acc
-                torch.save(self.model.state_dict(), "best_model.pth")
+                torch.save(self.model.state_dict(), "best_model_without_weights.pth")
                 print("Saved best model")

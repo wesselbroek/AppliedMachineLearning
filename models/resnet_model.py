@@ -6,7 +6,7 @@ from torchvision.models import resnet50
 class BirdClassifier(nn.Module):
     def __init__(self, num_classes=200, attr_dim=None):
         super().__init__()
-        self.backbone = resnet50(weights="IMAGENET1K_V2")
+        self.backbone = resnet50(weights=None)
         in_features = self.backbone.fc.in_features
 
         if attr_dim is not None:
