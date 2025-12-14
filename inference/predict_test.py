@@ -24,10 +24,12 @@ class Predictor:
         with torch.no_grad():
             for imgs, img_paths in loader:
                 imgs = imgs.to(self.device)
-                if self.attr_dim is not None and self.attributes is not None:
-                    attr_vectors = torch.zeros((imgs.size(0), self.attr_dim)).to(self.device)
-                else:
-                    attr_vectors = None
+                attr_vectors = None
+                if self.attr_dim is not None:
+                    # At test time we don't have ground-truth labels, so we cannot select
+                    # per-class attribute vectors. For any attribute-augmented model, we feed
+                    # zero vectors as a consistent placeholder.
+                    attr_vectors = torch.zeros((imgs.size(0), self.attr_dim), device=self.device)
 
                 outputs = self.model(imgs, attr_vectors)
                 _, preds = outputs.max(1)
