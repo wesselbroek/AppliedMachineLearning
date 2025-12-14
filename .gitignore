@@ -207,10 +207,10 @@ marimo/_lsp/
 __marimo__/
 
 # Data files - Machine Learning project specific
-test_images/
-train_images/
+data/test_images/
+data/train_images/
 processed_train/
-attributes.npy
+data/attributes.npy
 attributes.txt
 class_names.npy
 *.csv

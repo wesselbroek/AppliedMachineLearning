@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from collections import Counter
 import numpy as np
 
+
 #dataset class
 class BirdDataset(Dataset):
     def __init__(self, csv_path, root_dir, attributes_path=None, transform=None):
@@ -45,7 +46,8 @@ class BirdDataset(Dataset):
 
         return img, label, attr_vector, img_path
 
-#normalization and augmentation of images
+
+# normalization and augmentation of images
 augmentation_transforms = transforms.Compose([
     transforms.Resize((256, 256)),
     transforms.RandomResizedCrop(224),
@@ -65,6 +67,7 @@ basic_transforms = transforms.Compose([
                          [0.229, 0.224, 0.225])
 ])
 
+
 # saving the preprocessed images
 def save_tensor_as_image(tensor, output_path):
     # Denormalize and save tensor as image file.
@@ -75,6 +78,7 @@ def save_tensor_as_image(tensor, output_path):
     img = denorm(tensor).clamp(0, 1)
     img = transforms.ToPILImage()(img)
     img.save(output_path)
+
 
 def preprocess_and_save(dataset, output_dir, sampler=None):
     loader = DataLoader(dataset, batch_size=1, sampler=sampler, shuffle=False)
@@ -99,7 +103,8 @@ def preprocess_and_save(dataset, output_dir, sampler=None):
             attr_output_path = os.path.join(class_dir, filename.replace(".jpg", "_attr.pt"))
             torch.save(attr_vector.squeeze(0), attr_output_path)
 
-#checks and handles weighted samples
+
+# checks and handles weighted samples
 def create_weighted_sampler(dataset):
     labels = [dataset[i][1] for i in range(len(dataset))]
     class_counts = Counter(labels)
@@ -114,10 +119,11 @@ def create_weighted_sampler(dataset):
 
     return WeightedRandomSampler(sample_weights, num_samples=len(sample_weights), replacement=True)
 
+
 def main():
     csv_path = "train_images.csv"
     root_dir = "."
-    attributes_path = "attributes.npy"
+    attributes_path = "data/attributes.npy"
 
     dataset = BirdDataset(
         csv_path=csv_path,
@@ -133,6 +139,7 @@ def main():
     preprocess_and_save(dataset, output_dir, sampler=sampler)
 
     print("Preprocessing completed")
+
 
 if __name__ == "__main__":
     main()
